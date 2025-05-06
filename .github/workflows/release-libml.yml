@@ -2,6 +2,8 @@ name: Build and Release LibML
 
 on:
   push:
+    branches:
+      - main
     tags:
       - "v*.*.*"
 
@@ -12,6 +14,9 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          fetch-tags: true
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -25,24 +30,42 @@ jobs:
       - name: Build the package
         run: python -m build .
 
+      - name: Get package version the package name
+        id: get_version
+        run: |
+          if [[ "${GITHUB_REF}" == refs/tags/* ]]; then
+            VERSION="${GITHUB_REF#refs/tags/}"
+            echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+            echo "prerelease=false" >> "$GITHUB_OUTPUT"
+            echo "tagged=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "Not a tagged release. Using the latest version from dist/*.whl"
+            VERSION="v$(ls dist/*.whl | tail -n1 | grep -oP '\d+\.\d+\.\d+(\.\w+\d+)*')"
+            echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+            echo "prerelease=true" >> "$GITHUB_OUTPUT"
+            echo "tagged=false" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
+        if: github.ref_type == 'tag' || github.ref == 'refs/heads/main'
         with:
           name: lib-ml
           path: dist/*
 
       - name: Create GitHub Release
         id: create_release
+        if: github.ref_type == 'tag' || github.ref == 'refs/heads/main'
         uses: softprops/action-gh-release@v2
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          tag_name: ${{ github.ref_name }}
+          tag_name: ${{ steps.get_version.outputs.version }}
           name: Release ${{ github.ref_name }}
           body: |
             Automated release of lib-ml.
-            Version: ${{ github.ref_name }}
+            Version: ${{ steps.get_version.outputs.version }}
           draft: false
-          prerelease: false
+          prerelease: ${{ steps.get_version.outputs.prerelease }}
           files: |
-              dist/*
+            dist/*

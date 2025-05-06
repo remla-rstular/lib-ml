@@ -67,5 +67,6 @@ jobs:
             Version: ${{ steps.get_version.outputs.version }}
           draft: false
           prerelease: ${{ steps.get_version.outputs.prerelease }}
+          make_latest: ${{ steps.get_version.outputs.tagged }}
           files: |
             dist/*

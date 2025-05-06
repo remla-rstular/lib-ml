@@ -35,14 +35,14 @@ class TextPreprocessor(BaseEstimator, TransformerMixin):
 
 
 def process_text(
-    text: str,
+    text: list[str],
     enable_sanitize: bool = True,
     enable_advanced: bool = True,
     enable_restaurant: bool = True,
-) -> str:
+) -> list[str]:
     preprocessor = TextPreprocessor(
         enable_sanitize=enable_sanitize,
         enable_advanced=enable_advanced,
         enable_restaurant=enable_restaurant,
     )
-    return preprocessor.transform([text])[0]
+    return preprocessor.transform(text)
